@@ -1,19 +1,26 @@
+import { db } from '../db';
+import { tasksTable } from '../db/schema';
 import { type ToggleTaskInput, type Task } from '../schema';
+import { eq, not } from 'drizzle-orm';
 
 export const toggleTask = async (input: ToggleTaskInput): Promise<Task> => {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is toggling the completed status of a task.
-    // It should find the task by ID, flip the completed boolean value, and update the updated_at timestamp.
-    // This provides a convenient way to mark tasks as complete/incomplete without a full update.
-    // If the task is not found, it should throw an appropriate error.
-    return Promise.resolve({
-        id: input.id,
-        title: "Sample Task",
-        description: null,
-        completed: true, // Placeholder - should be toggled value
-        due_date: null,
-        reminder_date: null,
-        created_at: new Date(Date.now() - 86400000), // Yesterday as placeholder
+  try {
+    const result = await db.update(tasksTable)
+      .set({ 
+        completed: not(tasksTable.completed),
         updated_at: new Date()
-    } as Task);
-}
+      })
+      .where(eq(tasksTable.id, input.id))
+      .returning()
+      .execute();
+
+    if (result.length === 0) {
+      throw new Error(`Task with ID ${input.id} not found`);
+    }
+
+    return result[0];
+  } catch (error) {
+    console.error('Task toggle failed:', error);
+    throw error;
+  }
+};
